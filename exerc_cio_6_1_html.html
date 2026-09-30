@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exercício 6.1 - Gerenciamento de Estoque</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f8fafc;
+            color: #334155;
+        }
+        h1, h2 {
+            color: #1e293b;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        .card {
+            border: 1px solid #e2e8f0;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            background-color: #f1f5f9;
+        }
+        .form-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+        input {
+            padding: 8px;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            flex: 1;
+            min-width: 120px;
+        }
+        button {
+            padding: 8px 16px;
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover {
+            background-color: #1d4ed8;
+        }
+        button.btn-success {
+            background-color: #16a34a;
+        }
+        button.btn-success:hover {
+            background-color: #15803d;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        th, td {
+            border: 1px solid #cbd5e1;
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #e2e8f0;
+        }
+        .input-qtd {
+            width: 70px;
+        }
+        .actions {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Controle de Estoque</h1>
+
+    <!-- Exercício 6.1.a: Formulário de Inclusão de Produto -->
+    <div class="card">
+        <h2>Incluir Novo Produto (Exercício 6.1.a)</h2>
+        <div class="form-group">
+            <input type="text" id="novoNome" placeholder="Nome do Produto">
+            <input type="number" id="novaQtd" placeholder="Quantidade" min="0">
+            <input type="number" id="novoPreco" placeholder="Preço (R$)" step="0.01" min="0">
+            <button onclick="incluirProduto()">Incluir Produto</button>
+        </div>
+    </div>
+
+    <!-- Tabela do Estoque -->
+    <h2>Lista de Produtos</h2>
+    <table id="tabelaEstoque">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nome</th>
+                <th>Quantidade</th>
+                <th>Preço Unitário</th>
+            </tr>
+        </thead>
+        <tbody id="corpoTabela">
+            <!-- Os dados do estoque serão carregados aqui -->
+        </tbody>
+    </table>
+
+    <!-- Exercício 6.1.b: Botões de Ação -->
+    <div class="actions">
+        <button onclick="atualizarEstoque()">Atualizar Estoque</button>
+        <button class="btn-success" onclick="salvarEstoque()">Salvar Arquivo JSON</button>
+    </div>
+</div>
+
+<script>
+    let estoque = [];
+
+    // Carrega o arquivo JSON inicial
+    async function carregarEstoque() {
+        try {
+            const response = await fetch('estoque.json');
+            estoque = await response.json();
+            exibirEstoque();
+        } catch (error) {
+            console.error("Erro ao carregar o estoque:", error);
+            alert("Não foi possível carregar o arquivo estoque.json. Verifique se está rodando em um servidor local.");
+        }
+    }
+
+    // Exibe os produtos na tabela
+    function exibirEstoque() {
+        const corpoTabela = document.getElementById('corpoTabela');
+        corpoTabela.innerHTML = '';
+
+        estoque.forEach(produto => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${produto.id}</td>
+                <td>${produto.nome}</td>
+                <td>
+                    <input type="number" class="input-qtd" data-id="${produto.id}" value="${produto.qtd}" min="0">
+                </td>
+                <td>R$ ${Number(produto.preco).toFixed(2)}</td>
+            `;
+            corpoTabela.appendChild(tr);
+        });
+    }
+
+    // Exercício 6.1.a: Função para incluir um novo produto
+    function incluirProduto() {
+        const nomeInput = document.getElementById('novoNome');
+        const qtdInput = document.getElementById('novaQtd');
+        const precoInput = document.getElementById('novoPreco');
+
+        const nome = nomeInput.value.trim();
+        const qtd = parseInt(qtdInput.value);
+        const preco = parseFloat(precoInput.value);
+
+        if (!nome || isNaN(qtd) || isNaN(preco)) {
+            alert("Por favor, preencha todos os campos corretamente.");
+            return;
+        }
+
+        // Calcula o próximo ID disponível
+        const novoId = estoque.length > 0 ? Math.max(...estoque.map(p => p.id)) + 1 : 1;
+
+        const novoProduto = {
+            id: novoId,
+            nome: nome,
+            qtd: qtd,
+            preco: preco
+        };
+
+        estoque.push(novoProduto);
+
+        // Limpa os campos de entrada
+        nomeInput.value = '';
+        qtdInput.value = '';
+        precoInput.value = '';
+
+        exibirEstoque();
+    }
+
+    // Exercício 6.1.b: Função para atualizar a quantidade de cada produto em memória
+    function atualizarEstoque() {
+        const inputs = document.querySelectorAll('.input-qtd');
+
+        inputs.forEach(input => {
+            const id = parseInt(input.getAttribute('data-id'));
+            const novaQtd = parseInt(input.value);
+
+            const produto = estoque.find(p => p.id === id);
+            if (produto && !isNaN(novaQtd)) {
+                produto.qtd = novaQtd;
+            }
+        });
+
+        alert("Estoque atualizado na memória com sucesso!");
+        exibirEstoque();
+    }
+
+    // Exercício 6.1.b: Função para salvar o arquivo JSON atualizado
+    function salvarEstoque() {
+        // Atualiza os dados da tabela no array antes de salvar
+        atualizarEstoque();
+
+        // Converte o array para string em formato JSON com formatação (indentações de 2 espaços)
+        const jsonContent = JSON.stringify(estoque, null, 2);
+
+        // Dispara o download do arquivo JSON atualizado
+        const blob = new Blob([jsonContent], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "estoque.json";
+        link.click();
+        URL.revokeObjectURL(url);
+    }
+
+    // Inicializa a página carregando o estoque do arquivo JSON
+    carregarEstoque();
+</script>
+
+</body>
+</html>
